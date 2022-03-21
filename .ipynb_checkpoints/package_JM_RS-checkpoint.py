@@ -92,4 +92,17 @@ def PID_RT(SP,PV,Man,MVMan,MVFF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D
         MV.append(MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF)
     
         
-        
+
+def IMC_Tuning(K, Tlag1, Tlag2=0,theta=0,gamma = 0.5) : 
+    Tc = gamma   ## Calcul ? 
+    
+    
+    KcK = (Tlag1+Tlag2)/(theta + Tc)
+    
+    Kc = KcK/K
+    
+    Ti = (Tlag1 + Tlag2)
+    
+    Td = (Tlag1*Tlag2)/(Tlag1+Tlag2)
+    
+    return (Kc,Ti,Td)
