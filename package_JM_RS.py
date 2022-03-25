@@ -39,7 +39,7 @@ def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0,method='EBD'):
         
         
         
-def PID_RT(SP,PV,Man,MVMan,MVFF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D, E ,MV_FF = False, PVInit = 0,E_init = 0, Method = 'EBD-EBD'):  
+def PID_RT(SP,PV,Man,MV_Man,MVFF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D, E ,MV_FF = False, PV_Init = 0,E_init = 0, Method = 'EBD-EBD'):  
     
     if len(PV) == 0 : 
         E.append(SP[-1]-PV_Init)
@@ -80,8 +80,8 @@ def PID_RT(SP,PV,Man,MVMan,MVFF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D
             MV_D = 0
             
 
-    if Man : 
-        MV_I[-1] = (MV_Man-MV_P-MV_D-MV_FF)
+    if Man == True : 
+        MV_I[-1] = (MV_Man[-1]-MV_P[-1]-MV_D[-1]-MV_FF[-1])
         
 
     if ((MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF) > MVMax) : 
@@ -94,7 +94,7 @@ def PID_RT(SP,PV,Man,MVMan,MVFF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D
         
 
 def IMC_Tuning(K, Tlag1, Tlag2=0,theta=0,gamma = 0.5) : 
-    Tc = gamma   ## Calcul ? 
+    Tc = gamma*Tlag1   ## Calcul ? 
     
     
     KcK = (Tlag1+Tlag2)/(theta + Tc)
