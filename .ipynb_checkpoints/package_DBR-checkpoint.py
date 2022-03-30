@@ -300,6 +300,20 @@ class Process:
         self.parameters['Tlead2'] = parameters['Tlead2'] if 'Tlead2' in parameters else 0.0
         self.parameters['Tlag1'] = parameters['Tlag1'] if 'Tlag1' in parameters else 0.0
         self.parameters['Tlag2'] = parameters['Tlag2'] if 'Tlag2' in parameters else 0.0
+        
+
+#-----------------------------------        
+        
+class PID:
+    
+    def __init__(self, parameters):
+        
+        self.parameters = parameters
+        self.parameters['Kc'] = parameters['Kc'] if 'Kc' in parameters else 1.0
+        self.parameters['Ti'] = parameters['Ti'] if 'Ti' in parameters else 0.0
+        self.parameters['Td'] = parameters['Td'] if 'Td' in parameters else 0.0
+        self.parameters['alpha'] = parameters['alpha'] if 'alpha' in parameters else 0.0
+      
 
 #-----------------------------------        
 def Bode(P,omega, Show = True):
