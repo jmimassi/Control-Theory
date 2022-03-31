@@ -6,41 +6,30 @@ from IPython.display import display, clear_output
 
 
 #-----------------------------------      
-def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0,method='EBD'):
+def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0):
     
     """
-    The function "FO_RT" needs to be included in a "for or while loop".
+    The function "LL_RT" needs to be included in a "for or while loop".
     
     :MV: input vector
     :Kp: process gain
-    :T: lag time constant [s]
+    :Tlead: lead time constant [s]
+    :Tlag: lag time constant [s]
     :Ts: sampling period [s]
     :PV: output vector
     :PVInit: (optional: default value is 0)
-    :method: discretisation method (optional: default value is 'EBD')
-        EBD: Euler Backward difference
-        EFD: Euler Forward difference
-        TRAP: Trapezoïdal method
     
-    The function "FO_RT" appends a value to the output vector "PV".
-    The appended value is obtained from a recurrent equation that depends on the discretisation method.
+    The function "LL_RT" appends a value to the output vector "PV".
+    The appended value is obtained from a recurrent equation.
     """    
     
     if (Tlag != 0):
         K = Ts/Tlag
         if len(PV) == 0:
             PV.append(PVInit)
-        else: # MV[k+1] is MV[-1] and MV[k] is MV[-2]
-            if method == 'EBD':
-                PV.append((1/(1+K))*PV[-1] + (K*Kp/(1+K))*((1+Tlead/Ts)*MV[-1]-(Tlead/Ts)*MV[-2]))
-            elif method == 'EFD':
-                #PV.append((1-K)*PV[-1] + K*Kp*MV[-2])
-                pass
-            elif method == 'TRAP':
-                #PV.append((1/(2*T+Ts))*((2*T-Ts)*PV[-1] + Kp*Ts*(MV[-1] + MV[-2])))    
-                pass
-            else:
-                PV.append((1/(1+K))*PV[-1] + (K*Kp/(1+K))*MV[-1])
+        else :
+            PV.append((1/(1+K))*PV[-1] + (K*Kp/(1+K))*((1+Tlead/Ts)*MV[-1]-(Tlead/Ts)*MV[-2]))
+            
     else:
         PV.append(Kp*MV[-1])
         
@@ -48,7 +37,42 @@ def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0,method='EBD'):
 
 #-----------------------------------      
         
-def PID_RT(SP,PV,Man,MV_Man,MV_FF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D, E ,ManFF = False, PV_Init = 0,E_init = 0, Method = 'EBD-EBD'):  
+def PID_RT(SP,PV,Man,MV_Man,MV_FF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D, E ,ManFF = False, PV_Init = 0,E_init = 0):  
+    
+    """
+    The function "LL_RT" needs to be included in a "for or while loop".
+    Inputs :
+    :SP: SP (or SetPoint) vector
+    :PV: PV (or Processed Value) vector
+    :Man: Man (or Manual controller mode) vector (True or False)
+    :MV_Man: MV_Man (or Manual value for MV) vector
+    :MV_FF: MV_FF (or FeedForward) vector
+    
+    
+    Parameters : 
+    :Kc: controller gain
+    :Ti: integral time constant [s]
+    :Td: derivative time constant [s]
+    :alpha: Tfd = alpha*Td where Tfd is the derivative filter time constant [s]
+    :Ts: sampling period [s]
+    :MVMin: Minimum value for MV (used for saturation and anti wind-up)
+    :MVMax: Maximum value for MV (used for saturation and anti wind-up)
+    :ManFF: Activated FF in manual mode (optional: default value is False)
+    :PV_Init: Initial value for PV (optional : default value is 0) : used if PID_RT is ran first in the sequence and no value of PV are available yet.
+    
+    Outputs: 
+    :MV: MV (or Manipulated Value ) vector
+    :MV_P: MV_P (or Propotional part of MV) vector
+    :MV_I: MV_I (or Integral part of MV) vector
+    :MV_D: MV_D (or Derivative part of MV) vector
+    :E: (or Controller error) vector
+    
+    
+    
+    The function "PID_RT" appends a value to the output vectors "MV", "MV_P", "MV_I", "MV_D".
+    The appended values are based on the PID algorithm, the controller mode, and feedforward.
+    Note that saturation of "MV" within the limits [MVMin MVMax] is implemented with anti wind-up.
+    """   
     
     if len(PV) == 0 : 
         E.append(SP[-1]-PV_Init)
@@ -96,16 +120,30 @@ def PID_RT(SP,PV,Man,MV_Man,MV_FF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV
             MV_I[-1] = (MV_Man[-1]-MV_P[-1]-MV_D[-1]- MV_FF[-1])
         
 
-    if ((MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF[-1]) > MVMax) : 
+    if ((MV_I[-1] + MV_P[-1] ) > MVMax) : 
         MV.append(MVMax - MV_P[-1])
-    elif ((MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF[-1]) < MVMin ) : 
+    elif ((MV_I[-1] + MV_P[-1] )  < MVMin ) : 
         MV.append(MVMin - MV_P[-1])
     else :
         MV.append(MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF[-1])
     
         
 
-def IMC_Tuning(K, Tlag1, Tlag2=0,theta=0,gamma = 0.5) : 
+def IMC_Tuning(K, Tlag1, Tlag2,theta,gamma = 0.5) : 
+    """
+    IMC_Tuning(K,Tlag1,TLag2,theta,gamma=0.5)
+    This function computes the optimised IMC PID tuning parameters for a SOPDT Process. 
+    
+    :Kp: process gain
+    :Tlag1: first lag time constant [s]
+    :Tlag2: second lag time constant [s]
+    :theta: delay [s]
+    :gamma: used to compute the closed loop time constant TCLP [s] such as TCLP = gamme*T1p with T1p = main time constant of the process. (range for gamma is [0.2 ... 0.9], default value is 0.5)
+    
+    
+    returns (Kc,Ti,Td) that are the PID controller parameters
+    
+    """   
     Tc = gamma*Tlag1   ## Calcul ? 
     
     
@@ -132,7 +170,7 @@ class PID:
         self.parameters['Kc'] = parameters['Kc'] if 'Kc' in parameters else 1.0
         self.parameters['Ti'] = parameters['Ti'] if 'Ti' in parameters else 0.0
         self.parameters['Td'] = parameters['Td'] if 'Td' in parameters else 0.0
-        self.parameters['alpha'] = parameters['alpha'] if 'alpha' in parameters else 0.0
+        self.parameters['alpha'] = parameters['alpha'] if 'alpha' in parameters else 1.0
 
 #-----------------------------------      
 
@@ -156,12 +194,26 @@ def Margins(P,C,omega, Show = True):
         
         Use the following commands for a unit gain Lead-lag process:
             P.parameters['Tlag1'] = 10.0        
-            P.parameters['Tlead1'] = 15.0        
+            P.parameters['Tlead1'] = 15.0   
+            
+    :C: Controller as defined by the class "PID".
+        Use the following command to define the default process which is simply a unit gain process:
+            C = PID({})
+        
+        Use the following commands for a PID Controller:
+            C.parameters['Kc'] = 1.1
+            C.parameters['Ti'] = 10.0
+            C.parameters['Td'] = 2.0
+            C.parameters['alpha'] = 1
+        
+        Use the following commands for a unit gain PID:
+            C.parameters['Ti'] = 10.0        
+            C.parameters['Td'] = 15.0 
         
     :omega: frequency vector (rad/s); generated by a command of the type "omega = np.logspace(-2, 2, 10000)".
     :Show: boolean value (optional: default value = True). If Show = True, the Bode diagram is shown. Otherwise Ps (P(j omega)) (vector of complex numbers) is returned.
     
-    The function "Bode" generates the Bode diagram of the process P
+    The function "Margins" generates the Bode diagram of the process P*C and prints the margins of the system. 
     """     
     
     s = 1j*omega
