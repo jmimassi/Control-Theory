@@ -3,10 +3,68 @@ import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
 
+#-----------------------------------
+def myRound(x, base=5):
+    
+    """
+    Returns a float that is the closest multiple of "base" near "x"
+    Based on: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
+    
+    :x: parameter that is rounded to a multiple of "base"
+    :base: "base" parameter (optional: default value is 5)
+    
+    :return: rounded parameter
+    """
+    
+    return float(base * round(float(x)/base))
+#-----------------------------------
 
+#-----------------------------------
+def SelectPath_RT(path,time,signal):
+    
+    """
+    The function "SelectPath_RT" needs to be included in a "for or while loop".
+    
+    :path: dictionary input describing a path in time. Example: path = {0: 0, 5: 1, 50: 2, 80: 3, 100: 3}
+    :time: time vector.
+    :signal: signal vector that is being constructed using the input "path" and the vector "time".
+    
+    The function "SelectPath_RT" takes the last element in the vector "time" and, given the input "path", it appends the correct value to the vector "signal".
+    """    
+    
+    for timeKey in path:
+        if(time[-1] >= timeKey):
+            timeKeyPrevious = timeKey    
+    
+    value = path[timeKeyPrevious]
+    signal.append(value)
 
-#-----------------------------------      
-def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0,method='EBD'):
+#-----------------------------------
+def Delay_RT(MV,theta,Ts,MV_Delay,MVInit=0):
+    
+    """
+    The function "Delay_RT" needs to be included in a "for or while loop".
+    
+    :MV: input vector
+    :theta: delay [s]
+    :Ts: sampling period [s]
+    :MV_Delay: delayed input vector
+    :MVInit: (optional: default value is 0)
+    
+    The function "Delay_RT" appends a value to the vector "MV_Delay".
+    The appended value corresponds to the value in the vector "MV" "theta" seconds ago.
+    If "theta" is not a multiple of "Ts", "theta" is replaced by Ts*int(np.ceil(theta/Ts)), i.e. the closest multiple of "Ts" larger than "theta".
+    If the value of the vector "input" "theta" seconds ago is not defined, the value "MVInit" is used.
+    """
+    
+    NDelay = int(np.ceil(theta/Ts))
+    if NDelay > len(MV)-1:
+        MV_Delay.append(MVInit)
+    else:    
+        MV_Delay.append(MV[-NDelay-1])
+
+#-----------------------------------        
+def FO_RT(MV,Kp,T,Ts,PV,PVInit=0,method='EBD'):
     
     """
     The function "FO_RT" needs to be included in a "for or while loop".
@@ -26,120 +84,232 @@ def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0,method='EBD'):
     The appended value is obtained from a recurrent equation that depends on the discretisation method.
     """    
     
-    if (Tlag != 0):
-        K = Ts/Tlag
+    if (T != 0):
+        K = Ts/T
         if len(PV) == 0:
             PV.append(PVInit)
         else: # MV[k+1] is MV[-1] and MV[k] is MV[-2]
             if method == 'EBD':
-                PV.append((1/(1+K))*PV[-1] + (K*Kp/(1+K))*((1+Tlead/Ts)*MV[-1]-(Tlead/Ts)*MV[-2]))
+                PV.append((1/(1+K))*PV[-1] + (K*Kp/(1+K))*MV[-1])
             elif method == 'EFD':
-                #PV.append((1-K)*PV[-1] + K*Kp*MV[-2])
-                pass
+                PV.append((1-K)*PV[-1] + K*Kp*MV[-2])
             elif method == 'TRAP':
-                #PV.append((1/(2*T+Ts))*((2*T-Ts)*PV[-1] + Kp*Ts*(MV[-1] + MV[-2])))    
-                pass
+                PV.append((1/(2*T+Ts))*((2*T-Ts)*PV[-1] + Kp*Ts*(MV[-1] + MV[-2])))            
             else:
                 PV.append((1/(1+K))*PV[-1] + (K*Kp/(1+K))*MV[-1])
     else:
         PV.append(Kp*MV[-1])
-        
-#-----------------------------------             
 
-#-----------------------------------      
+#-----------------------------------
+def FOPDT(MV,Kp,T,theta,Ts,MVInit=0,PVInit=0,method='EBD'):
+    
+    """
+    The function "FOPDT" DOES NOT need to be included in a "for or while loop": this block is for offline use.
+    
+    :MV: input vector
+    :Kp: process gain
+    :T: lag time constant [s]
+    :theta: delay [s]
+    :Ts: sampling period [s]
+    :MVInit: (optional: default value is 0)    
+    :PVInit: (optional: default value is 0)
+    :method: discretisation method (optional: default value is 'EBD')
+        EBD: Euler Backward difference
+        EFD: Euler Forward difference
+        TRAP: Trapezoïdal method
         
-def PID_RT(SP,PV,Man,MV_Man,MV_FF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV_D, E ,ManFF = False, PV_Init = 0,E_init = 0, Method = 'EBD-EBD'):  
+    :return: simulated FOPDT output vector         
     
-    if len(PV) == 0 : 
-        E.append(SP[-1]-PV_Init)
-    else : 
-        E.append(SP[-1]-PV[-1])
+    The function "FOPDT" returns the simulated output FOPDT vector from the input vector "MV" and the input parameters.
+    """    
     
-    #PID 
-    ## Proportional action
+    MVDelay = []
+    MVTemp = []
+    PVSim = []    
     
-    MV_P.append(Kc*E[-1])
-    
-    ## Integral action 
-    
-    if len(MV_I) == 0 : 
-        if Ti > 0 :
-            MV_I.append(((Kc*Ts)/(Ti))*(E[-1]))
-        else : 
-            MV_I = 0
-    else : 
-        if Ti > 0 : 
-            MV_I.append(MV_I[-1]+((Kc*Ts)/(Ti))*(E[-1]))
-        else : 
-            MV_I = 0
-    
-    ## Derivative action
-    
-    Tfd = alpha*Td
-    
-    if len(MV_D) == 0 : 
-        if Td > 0 : 
-            MV_D.append(((Kc*Td)/(Tfd+Ts))*(E[-1]))
-        else : 
-            MV_D = 0
-    else : 
-        if Td > 0 : 
-            MV_D.append(((Tfd)/(Tfd+Ts))*MV_D[-1] + ((Kc*Td)/(Tfd+Ts))*(E[-1]-E[-2]))
-        else : 
-            MV_D = 0
+    for i in range(0,len(MV)):
+        MVTemp.append(MV[i])
+        Delay_RT(MVTemp,theta,Ts,MVDelay,MVInit)
+        FO_RT(MVDelay,Kp,T,Ts,PVSim,PVInit,method)
             
+    return PVSim
 
-    if Man[-1] == True : 
-        if ManFF : 
-            MV_I[-1] = (MV_Man[-1]-MV_P[-1]-MV_D[-1])
-        else : 
-            MV_I[-1] = (MV_Man[-1]-MV_P[-1]-MV_D[-1]- MV_FF[-1])
+#-----------------------------------
+def SOPDT(MV,Kp,T1,T2,theta,Ts,MVInit=0,PVInit=0,method='EBD'):
+    
+    """
+    The function "SOPDT" DOES NOT need to be included in a "for or while loop": this block is for offline use.
+    
+    :MV: input vector
+    :Kp: process gain
+    :T1: first (or main) lag time constant [s]
+    :T2: second lag time constant [s]    
+    :theta: delay [s]
+    :Ts: sampling period [s]
+    :MVInit: (optional: default value is 0)    
+    :PVInit: (optional: default value is 0)
+    :method: discretisation method (optional: default value is 'EBD')
+        EBD: Euler Backward difference
+        EFD: Euler Forward difference
+        TRAP: Trapezoïdal method
         
-
-    if ((MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF[-1]) > MVMax) : 
-        MV.append(MVMax - MV_P[-1])
-    elif ((MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF[-1]) < MVMin ) : 
-        MV.append(MVMin - MV_P[-1])
-    else :
-        MV.append(MV_I[-1] + MV_D[-1] + MV_P[-1] + MV_FF[-1])
+    :return: simulated SOPDT output vector         
     
+    The function "SOPDT" returns the simulated SOPDT output vector from the input vector "MV" and the input parameters.
+    """     
+    
+    MVDelay = []
+    MVTemp = []
+    PV1 = []
+    PVSim = []    
+    
+    for i in range(0,len(MV)):
+        MVTemp.append(MV[i])
+        Delay_RT(MVTemp,theta,Ts,MVDelay,MVInit)
+        FO_RT(MVDelay,Kp,T1,Ts,PV1,PVInit,method)
+        FO_RT(PV1,1,T2,Ts,PVSim,PVInit,method)
+            
+    return PVSim
+
+#-----------------------------------
+def FOPDT_cost(p,MV,PV,Ts,*args):
+    
+    """
+    :p: parameter vector:
+        Kp = p[0]: process gain
+        T = p[1]: lag time constant [s]
+        theta = p[2]: delay [s]
+    :MV: input vector used during experimentation
+    :PV: experimental output vector obtained in response to the input vector MV
+    :Ts: sampling period [s]
+    :args: object, axes and line handles for representing PV and the simulated PV at each function call (optional)
+        fig: figure object
+        ax1: axes object
+        l1: line object for PV
+        l2: line object for simulated PV
         
+    :return: identification cost with FOPDT model
+    
+    The function "FOPDT_cost" returns the identification cost, i.e. the sum of the model errors squared.
+    The model error is the difference between the experimental output "PV" and the simulated output with a FOPDT model and the parameter set "p".
+    
+    The assumption is that MVInit and PVInit are zero for the use of Delay_RT and FO_RT in the code.
+    The 'EBD' discretisation method is used.
+    This assumption is met after a "cleaning operation" after which MV[0] = 0 and PV[0] are 0.
+    """     
+    
+    Kp = p[0]
+    T = p[1]
+    theta = np.max((0,p[2]))
+    
+    MVDelay = []
+    MVTemp = []
+    PVSim = []
+    t = []
+    
+    objective = 0
+    
+    for i in range(0,len(MV)):
+        t.append(i*Ts)
+        MVTemp.append(MV[i])
+        Delay_RT(MVTemp,theta,Ts,MVDelay)
+        FO_RT(MVDelay,Kp,T,Ts,PVSim)
+        objective = objective + (PV[i] - PVSim[i])**2      
+    
+    for fig, ax1, l1, l2 in args:
+        l1.set_data(t,PV)
+        l2.set_data(t,PVSim)
+        ax1.set_xlim(0, t[-1]+1)
+        ax1.set_ylim(myRound(np.min(PV),5)-1, myRound(np.max(PV),5)+1)        
+        # Comment following line otherwise optimisation too slow
+        # ax1.text(100, 0.1, 'Kp = {0:3.2f}, T = {1:3.2f}, theta = {2:3.2f}'.format(Kp, T, theta), bbox={'facecolor': 'white'})
+        clear_output(wait=True)
+        display(fig)
+            
+    return objective
 
-def IMC_Tuning(K, Tlag1, Tlag2=0,theta=0,gamma = 0.5) : 
-    Tc = gamma*Tlag1   ## Calcul ? 
+#-----------------------------------
+def SOPDT_cost(p,MV,PV,Ts,*args):
     
+    """
+    :p: parameter vector:
+        Kp = p[0]: process gain
+        T1 = p[1]: first or main lag time constant [s]
+        T2 = p[2]: second lag time constant [s]    
+        theta = p[3]: delay [s]
+    :MV: input vector used during experimentation
+    :PV: experimental output vector obtained in response to the input vector MV
+    :Ts: sampling period [s]
+    :args: object, axes and line handles for representing PV and the simulated PV at each function call (optional)
+        fig: figure object
+        ax1: axes object
+        l1: line object for PV
+        l2: line object for simulated PV
+        
+    :return: identification cost with SOPDT model
     
-    KcK = (Tlag1+Tlag2)/(theta + Tc)
+    The function "SOPDT_cost" returns the identification cost, i.e. the sum of the model errors squared.
+    The model error is the difference between the experimental output "PV" and the simulated output with a SOPDT model and the parameter set "p".
     
-    Kc = KcK/K
+    The assumption is that MVInit and PVInit are zero for the use of Delay_RT and FO_RT in the code.
+    The 'EBD' discretisation method is used.
+    This assumption is met after a "cleaning operation" after which MV[0] = 0 and PV[0] are 0.
+    """    
     
-    Ti = (Tlag1 + Tlag2)
+    Kp = p[0]
+    T1 = p[1]
+    T2 = p[2]
+    theta = np.max((0,p[3]))    
     
-    Td = (Tlag1*Tlag2)/(Tlag1+Tlag2)
+    MVDelay = []
+    MVTemp = []
+    PV1 = []
+    PVSim = []
+    t = []
     
-    return (Kc,Ti,Td)
+    objective = 0
+    
+    for i in range(0,len(MV)):
+        t.append(i*Ts)
+        MVTemp.append(MV[i])
+        Delay_RT(MVTemp,theta,Ts,MVDelay)
+        FO_RT(MVDelay,Kp,T1,Ts,PV1)
+        FO_RT(PV1,1,T2,Ts,PVSim)
+        objective = objective + (PV[i] - PVSim[i])**2      
+    
+    for fig, ax1, l1, l2 in args:
+        l1.set_data(t,PV)
+        l2.set_data(t,PVSim)
+        ax1.set_xlim(0, t[-1]+1)
+        ax1.set_ylim(myRound(np.min(PV),5)-1, myRound(np.max(PV),5)+1)        
+        # Comment following line otherwise optimisation too slow
+        # ax1.text(100, 0.1, 'Kp = {0:3.2f}, T1 = {1:3.2f}, T2 = {2:3.2f}, theta = {3:3.2f}'.format(Kp, T1, T2, theta), bbox={'facecolor': 'white'})
+        clear_output(wait=True)
+        display(fig)
+            
+    return objective
 
-
-#-----------------------------------      
-
-#-----------------------------------      
-
-class PID:
+#-----------------------------------        
+class Process:
     
     def __init__(self, parameters):
         
         self.parameters = parameters
-        self.parameters['Kc'] = parameters['Kc'] if 'Kc' in parameters else 1.0
-        self.parameters['Ti'] = parameters['Ti'] if 'Ti' in parameters else 0.0
-        self.parameters['Td'] = parameters['Td'] if 'Td' in parameters else 0.0
-        self.parameters['alpha'] = parameters['alpha'] if 'alpha' in parameters else 0.0
-
-#-----------------------------------      
-
-#-----------------------------------      
+        self.parameters['Kp'] = parameters['Kp'] if 'Kp' in parameters else 1.0
+        self.parameters['theta'] = parameters['theta'] if 'theta' in parameters else 0.0
+        self.parameters['Tlead1'] = parameters['Tlead1'] if 'Tlead1' in parameters else 0.0
+        self.parameters['Tlead2'] = parameters['Tlead2'] if 'Tlead2' in parameters else 0.0
+        self.parameters['Tlag1'] = parameters['Tlag1'] if 'Tlag1' in parameters else 0.0
+        self.parameters['Tlag2'] = parameters['Tlag2'] if 'Tlag2' in parameters else 0.0
         
+
+#-----------------------------------        
         
-def Margins(P,C,omega, Show = True):
+
+      
+
+#-----------------------------------        
+def Bode(P,omega, Show = True):
     
     """
     :P: Process as defined by the class "Process".
@@ -179,17 +349,6 @@ def Margins(P,C,omega, Show = True):
     Ps = np.multiply(Ps,PLead1)
     Ps = np.multiply(Ps,PLead2)
     
-    
-    CGain = C.parameters['Kc']*np.ones_like(Ptheta)
-    C1 = (1+1/(C.parameters['Ti']*s)+ (C.parameters['Td']*s/(C.parameters['alpha']*C.parameters['Td']*s+1)))
-   
-    
-    Cs = np.multiply(CGain,C1)
-
-    
-    Ps = np.multiply(Ps,Cs)
-    
-    
     if Show == True:
     
         fig, (ax_gain, ax_phase) = plt.subplots(2,1)
@@ -198,23 +357,17 @@ def Margins(P,C,omega, Show = True):
 
         # Gain part
         ax_gain.semilogx(omega,20*np.log10(np.abs(Ps)),label='P(s)')
-        ax_gain.semilogx(omega,20*np.log10(np.abs(np.ones_like(PGain))),label='0')
-        
-        gain = 20*np.log10(np.abs(Ps))
-        
-        
-        
-        
-        #if P.parameters['theta'] > 0:
-            #ax_gain.semilogx(omega,20*np.log10(np.abs(Ptheta)),label='Ptheta(s)')
-        #if P.parameters['Tlag1'] > 0:
-            #ax_gain.semilogx(omega,20*np.log10(np.abs(PLag1)),label='PLag1(s)')
-        #if P.parameters['Tlag2'] > 0:        
-            #ax_gain.semilogx(omega,20*np.log10(np.abs(PLag2)),label='PLag2(s)')
-        #if P.parameters['Tlead1'] > 0:        
-            #ax_gain.semilogx(omega,20*np.log10(np.abs(PLead1)),label='PLead1(s)')
-        #if P.parameters['Tlead2'] > 0:    
-            #ax_gain.semilogx(omega,20*np.log10(np.abs(PLead2)),label='PLead2(s)')    
+        ax_gain.semilogx(omega,20*np.log10(np.abs(PGain)),label='Pgain')
+        if P.parameters['theta'] > 0:
+            ax_gain.semilogx(omega,20*np.log10(np.abs(Ptheta)),label='Ptheta(s)')
+        if P.parameters['Tlag1'] > 0:
+            ax_gain.semilogx(omega,20*np.log10(np.abs(PLag1)),label='PLag1(s)')
+        if P.parameters['Tlag2'] > 0:        
+            ax_gain.semilogx(omega,20*np.log10(np.abs(PLag2)),label='PLag2(s)')
+        if P.parameters['Tlead1'] > 0:        
+            ax_gain.semilogx(omega,20*np.log10(np.abs(PLead1)),label='PLead1(s)')
+        if P.parameters['Tlead2'] > 0:    
+            ax_gain.semilogx(omega,20*np.log10(np.abs(PLead2)),label='PLead2(s)')    
         gain_min = np.min(20*np.log10(np.abs(Ps)/5))
         gain_max = np.max(20*np.log10(np.abs(Ps)*5))
         ax_gain.set_xlim([np.min(omega), np.max(omega)])
@@ -225,30 +378,17 @@ def Margins(P,C,omega, Show = True):
     
         # Phase part
         ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(Ps)),label='P(s)')
-        phase = (180/np.pi)*np.unwrap(np.angle(Ps))
-        
-        indexc = np.where(np.round(gain,2) == 0.00)[0][0]
-        wc = omega[indexc]
-        indexu = np.where(np.round(phase,1) == -180.0)[0][0]
-        wu = omega[indexu]
-        ax_phase.vlines(wc,-180,phase[indexc])
-        print('Gain margin : ',np.round(gain[indexu],5),' at ', np.round(wu,5), ' rad/s')
-        print('Phase margin : ',np.round(phase[indexc],5)+180,' at ', np.round(wc,5), ' rad/s')
-        
-        ax_gain.vlines(wu,0,gain[indexu])
-        
-        
-        ax_phase.axhline(y=(-180))
-        #if P.parameters['theta'] > 0:    
-            #ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(Ptheta)),label='Ptheta(s)')
-        #if P.parameters['Tlag1'] > 0:        
-            #ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLag1)),label='PLag1(s)')
-        #if P.parameters['Tlag2'] > 0:        
-            #ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLag2)),label='PLag2(s)')
-        #if P.parameters['Tlead1'] > 0:        
-            #ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLead1)),label='PLead1(s)')
-        #if P.parameters['Tlead2'] > 0:        
-            #ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLead2)),label='PLead2(s)')    
+        ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PGain)),label='Pgain')
+        if P.parameters['theta'] > 0:    
+            ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(Ptheta)),label='Ptheta(s)')
+        if P.parameters['Tlag1'] > 0:        
+            ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLag1)),label='PLag1(s)')
+        if P.parameters['Tlag2'] > 0:        
+            ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLag2)),label='PLag2(s)')
+        if P.parameters['Tlead1'] > 0:        
+            ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLead1)),label='PLead1(s)')
+        if P.parameters['Tlead2'] > 0:        
+            ax_phase.semilogx(omega, (180/np.pi)*np.unwrap(np.angle(PLead2)),label='PLead2(s)')    
         ax_phase.set_xlim([np.min(omega), np.max(omega)])
         ph_min = np.min((180/np.pi)*np.unwrap(np.angle(Ps))) - 10
         ph_max = np.max((180/np.pi)*np.unwrap(np.angle(Ps))) + 10
@@ -257,5 +397,3 @@ def Margins(P,C,omega, Show = True):
         ax_phase.legend(loc='best')
     else:
         return Ps
-    
-#-----------------------------------      
