@@ -26,6 +26,7 @@ def LL_RT(MV,Kp,Tlead,Tlag,Ts,PV,PVInit=0):
     
     The function "LL_RT" appends a value to the output vector "PV".
     The appended value is obtained from a recurrent equation.
+    The used discretisation method is euler backward difference. 
     """    
     
     if (Tlag != 0):
@@ -76,6 +77,7 @@ def PID_RT(SP,PV,Man,MV_Man,MV_FF,Kc,Ti,Td,alpha, Ts,MVMin,MVMax,MV,MV_P,MV_I,MV
     
     The function "PID_RT" appends a value to the output vectors "MV", "MV_P", "MV_I", "MV_D".
     The appended values are based on the PID algorithm, the controller mode, and feedforward.
+    The used discretisation method is euler backward difference. 
     Note that saturation of "MV" within the limits [MVMin MVMax] is implemented with anti wind-up.
     """   
     
@@ -297,6 +299,12 @@ def Margins(P,C,omega, Show = True):
 
 
 def GrapheMVF(): 
+    
+    """
+    t, PV = GrapheMVF()
+    Returns time and PV cleaned for a MV step in an array.The data is from our experiments. 
+    
+    """
     nameFile = 'Open_loop_experiment_on_MV_2022-03-12-22h08.txt'
 
     if 'MV' in nameFile:
@@ -337,6 +345,12 @@ def GrapheMVF():
     return tm,PVm
 
 def GrapheDVF(): 
+    
+    """
+    t, PV = GrapheDVF()
+    Returns time and PV cleaned for a DV step in an array. The data is from our experiments. 
+    
+    """
     nameFile = 'Open_loop_experiment_on_DV_2022-03-12-22h35.txt'
 
     if 'MV' in nameFile:
