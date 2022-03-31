@@ -3,6 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
 
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.optimize import minimize
+
 
 
 #-----------------------------------      
@@ -1474,15 +1479,25 @@ def GraphMV():
         impaire.append(n)
         n += 4
         i+=1
+    
+                         
+    impairea = []                     
+    na = 1
+    ia = 0
+    while ia < len(DataMV)/4:
+        impairea.append(na)
+        na += 4
+        ia+=1
     #print(impaire)
 
     #print(len(DataMV))
 
     for elem in range(len(DataMV)):
         if elem in impaire:
-            ygraphMV.append(((DataMV[elem]-57.7299999999999968)/(75.45999999999999375-57.7299999999999968))/2)
+            ygraphMV.append(elem)
             
     #print(ygraph)
+   
 
     import matplotlib.pyplot as pl
 
@@ -1494,7 +1509,100 @@ def GraphMV():
         xMV.append(n)
         counter0 += 1
 
-
+    PV = ygraphMV
+    t = xMV
+    MV = impairea
+    tstep = np.argwhere(np.diff(MV) != 0)
+    tstep = tstep[0][0]
+    tm = t[tstep:]
+    tm = tm - tm[0]    
+    MVstep = MV[tstep + 1] - MV[tstep]
+    MVm = MV[tstep:]
+    PVm = PV[tstep:]
+    PVm = (PVm - PVm[0])/MVstep
+    MVm = (MVm - MVm[0])/MVstep  
     #print(x)
 
-    return xMV,ygraphMV
+    return tm,PVm
+
+
+
+def GrapheMVF(): 
+    nameFile = 'Open_loop_experiment_on_MV_2022-03-12-22h08.txt'
+
+    if 'MV' in nameFile:
+        ExpVariable = 'MV'
+    else:    
+        ExpVariable = 'DV'
+    
+    print(ExpVariable)    
+    
+    titleName = nameFile.split('.')[0]    
+    data = pd.read_csv('Data/' + nameFile)
+    t = data['t'].values - data['t'].values[0]
+    MV = data['MV'].values
+    PV = data['PV'].values
+    DV = data['DV'].values
+    
+    if ExpVariable == 'MV':
+        tstep = np.argwhere(np.diff(MV) != 0)
+        tstep = tstep[0][0]
+        tm = t[tstep:]
+        tm = tm - tm[0]    
+        MVstep = MV[tstep + 1] - MV[tstep]
+        MVm = MV[tstep:]
+        PVm = PV[tstep:]
+        PVm = (PVm - PVm[0])/MVstep
+        MVm = (MVm - MVm[0])/MVstep    
+    else:    
+        tstep = np.argwhere(np.diff(DV) != 0)
+        tstep = tstep[0][0]
+        tm = t[tstep:]
+        tm = tm - tm[0]
+        DVstep = DV[tstep + 1] - DV[tstep]    
+        DVm = DV[tstep:]
+        PVm = PV[tstep:]
+        PVm = (PVm - PVm[0])/DVstep
+        DVm = (DVm - DVm[0])/DVstep
+        
+    return tm,PVm
+
+def GrapheDVF(): 
+    nameFile = 'Open_loop_experiment_on_DV_2022-03-12-22h35.txt'
+
+    if 'MV' in nameFile:
+        ExpVariable = 'MV'
+    else:    
+        ExpVariable = 'DV'
+    
+    print(ExpVariable)    
+    
+    titleName = nameFile.split('.')[0]    
+    data = pd.read_csv('Data/' + nameFile)
+    t = data['t'].values - data['t'].values[0]
+    MV = data['MV'].values
+    PV = data['PV'].values
+    DV = data['DV'].values
+    
+    if ExpVariable == 'MV':
+        tstep = np.argwhere(np.diff(MV) != 0)
+        tstep = tstep[0][0]
+        tm = t[tstep:]
+        tm = tm - tm[0]    
+        MVstep = MV[tstep + 1] - MV[tstep]
+        MVm = MV[tstep:]
+        PVm = PV[tstep:]
+        PVm = (PVm - PVm[0])/MVstep
+        MVm = (MVm - MVm[0])/MVstep    
+    else:    
+        tstep = np.argwhere(np.diff(DV) != 0)
+        tstep = tstep[0][0]
+        tm = t[tstep:]
+        tm = tm - tm[0]
+        DVstep = DV[tstep + 1] - DV[tstep]    
+        DVm = DV[tstep:]
+        PVm = PV[tstep:]
+        PVm = (PVm - PVm[0])/DVstep
+        DVm = (DVm - DVm[0])/DVstep
+        
+    return tm,PVm
