@@ -145,7 +145,7 @@ def IMC_Tuning(K, Tlag1, Tlag2,theta,gamma = 0.5) :
     :Tlag1: first lag time constant [s]
     :Tlag2: second lag time constant [s]
     :theta: delay [s]
-    :gamma: used to compute the closed loop time constant TCLP [s] such as TCLP = gamme*T1p with T1p = main time constant of the process. (range for gamma is [0.2 ... 0.9], default value is 0.5)
+    :gamma: used to compute the closed loop time constant TCLP [s] such as TCLP = gamma*T1p with T1p = main time constant of the process. (range for gamma is [0.2 ... 0.9], default value is 0.5)
     
     
     returns (Kc,Ti,Td) that are the PID controller parameters
