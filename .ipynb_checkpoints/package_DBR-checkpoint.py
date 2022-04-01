@@ -17,6 +17,7 @@ def myRound(x, base=5):
     """
     
     return float(base * round(float(x)/base))
+#-----------------------------------
 
 #-----------------------------------
 def SelectPath_RT(path,time,signal):
@@ -300,6 +301,12 @@ class Process:
         self.parameters['Tlead2'] = parameters['Tlead2'] if 'Tlead2' in parameters else 0.0
         self.parameters['Tlag1'] = parameters['Tlag1'] if 'Tlag1' in parameters else 0.0
         self.parameters['Tlag2'] = parameters['Tlag2'] if 'Tlag2' in parameters else 0.0
+        
+
+#-----------------------------------        
+        
+
+      
 
 #-----------------------------------        
 def Bode(P,omega, Show = True):
